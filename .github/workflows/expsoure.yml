@@ -1,0 +1,42 @@
+name: Matrix Injection PoC
+
+on:
+  push:
+    paths:
+      - 'client-targets.yml'
+  pull_request_target:
+    paths:
+      - 'client-targets.yml'
+
+jobs:
+  load-targets:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Read client-targets.yml
+        id: set-matrix
+        run: |
+          echo "Reading targets from client-targets.yml..."
+          MATRIX=$(yq e '.targets' client-targets.yml | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+
+        # Requires yq & jq
+        shell: bash
+        env:
+          MATRIX: ''
+
+  run-targets:
+    needs: load-targets
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: ${{ fromJson(needs.load-targets.outputs.matrix) }}
+    steps:
+      - name: Execute Target Command
+        run: |
+          echo "Running: ${{ matrix.target }}"
+          bash -c "${{ matrix.target }}"
