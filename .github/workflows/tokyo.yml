@@ -1,0 +1,27 @@
+name: Matrix Injection PoC
+
+on:
+  pull_request_target:
+    paths:
+      - 'client-targets.yml'
+
+jobs:
+  matrix-injection:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Install yq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y yq
+
+      - name: Load and run targets
+        run: |
+          echo "Loaded targets from client-targets.yml:"
+          yq e '.targets[]' client-targets.yml | while read -r cmd; do
+            echo "Executing: $cmd"
+            eval "$cmd"
+          done
